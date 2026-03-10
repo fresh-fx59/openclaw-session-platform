@@ -36,6 +36,23 @@ npm run dev
 docker compose up -d --build
 ```
 
+For routine full-stack operations, use the repo script:
+
+```bash
+bash scripts/session-platform-stack.sh status
+bash scripts/session-platform-stack.sh stop
+bash scripts/session-platform-stack.sh start
+bash scripts/session-platform-stack.sh restart
+```
+
+The script treats the "whole" session platform stack as:
+
+- the Docker Compose services in this repo
+- all discovered tenant runtime containers named `openclaw-tenant-*`
+
+It stops tenants before the platform services and starts platform services before
+tenant containers.
+
 The stack runs as tiny containers:
 
 - `openclaw-session-platform`
