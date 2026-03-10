@@ -16,6 +16,8 @@ class FakeExec {
 }
 
 class FakeContainer {
+  lastEnv: string[] | null = null;
+
   constructor(
     private status: string = "created",
     private readonly gatewayStatus = {
@@ -32,12 +34,28 @@ class FakeContainer {
       },
       health: {
         ok: true
+      },
+      "chat.send": {
+        status: "ok",
+        message: {
+          role: "assistant",
+          content: [{ type: "text", text: "TENANT_OK" }]
+        }
+      },
+      "chat.history": {
+        messages: [
+          {
+            role: "assistant",
+            content: [{ type: "text", text: "TENANT_OK" }]
+          }
+        ]
       }
-    }
+    },
+    private readonly inspectEnv: string[] = []
   ) {}
 
   async inspect() {
-    return { State: { Status: this.status } };
+    return { State: { Status: this.status }, Config: { Env: this.inspectEnv } };
   }
 
   async start() {
@@ -75,8 +93,9 @@ class FakeDocker {
     return container;
   }
 
-  async createContainer(options: { name: string }) {
+  async createContainer(options: { name: string; Env: string[] }) {
     const container = new FakeContainer();
+    container.lastEnv = options.Env;
     this.containers.set(options.name, container);
     return container;
   }
@@ -94,7 +113,8 @@ describe("OpenClawRuntimeAdapter", () => {
       containerStateDir: root,
       hostStateDir: root,
       image: "openclaw-demo-openclaw-gateway:latest",
-      network: "internal"
+      network: "internal",
+      authSourceContainer: "openclaw-gateway"
     });
 
     const prepared = await adapter.prepareTenant("tenant-one");
@@ -109,6 +129,9 @@ describe("OpenClawRuntimeAdapter", () => {
     expect(started.state).toBe("running");
     expect(started.readiness).toBe("ready");
     expect(started.rpcOk).toBe(true);
+    expect(docker.containers.get("openclaw-tenant-tenant-one")?.lastEnv).toContain(
+      "HOME=/home/node"
+    );
 
     const stopped = await adapter.stop("tenant-one");
     expect(stopped.state).toBe("exited");
@@ -132,7 +155,8 @@ describe("OpenClawRuntimeAdapter", () => {
       containerStateDir: root,
       hostStateDir: root,
       image: "openclaw-demo-openclaw-gateway:latest",
-      network: "internal"
+      network: "internal",
+      authSourceContainer: "openclaw-gateway"
     });
 
     const status = await adapter.status("warming-tenant");
@@ -150,7 +174,8 @@ describe("OpenClawRuntimeAdapter", () => {
       containerStateDir: root,
       hostStateDir: root,
       image: "openclaw-demo-openclaw-gateway:latest",
-      network: "internal"
+      network: "internal",
+      authSourceContainer: "openclaw-gateway"
     });
 
     const statusResult = await adapter.call("call-tenant", "status");
@@ -163,5 +188,49 @@ describe("OpenClawRuntimeAdapter", () => {
     await expect(adapter.call("call-tenant", "chat.send")).rejects.toThrow(
       "OpenClaw gateway method is not allowed"
     );
+  });
+
+  test("forwards anthropic env from the source container and supports chat wrappers", async () => {
+    const root = await mkdtemp(join(tmpdir(), "openclaw-adapter-"));
+    const docker = new FakeDocker();
+    docker.containers.set(
+      "openclaw-gateway",
+      new FakeContainer("running", undefined, undefined, ["ANTHROPIC_API_KEY=test-key"])
+    );
+    const adapter = new OpenClawRuntimeAdapter(docker as never, {
+      containerStateDir: root,
+      hostStateDir: root,
+      image: "openclaw-demo-openclaw-gateway:latest",
+      network: "internal",
+      authSourceContainer: "openclaw-gateway"
+    });
+
+    await adapter.start("chat-tenant");
+    expect(docker.containers.get("openclaw-tenant-chat-tenant")?.lastEnv).toContain(
+      "ANTHROPIC_API_KEY=test-key"
+    );
+
+    const send = await adapter.chatSend("chat-tenant", {
+      sessionKey: "main",
+      message: "hello",
+      idempotencyKey: "idem-1"
+    });
+    expect(send).toEqual({
+      status: "ok",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "TENANT_OK" }]
+      }
+    });
+
+    const history = await adapter.chatHistory("chat-tenant", { sessionKey: "main", limit: 10 });
+    expect(history).toEqual({
+      messages: [
+        {
+          role: "assistant",
+          content: [{ type: "text", text: "TENANT_OK" }]
+        }
+      ]
+    });
   });
 });

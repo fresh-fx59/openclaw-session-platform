@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import Fastify from "fastify";
 import { z } from "zod";
 
@@ -18,6 +20,19 @@ const gatewayCallSchema = z.object({
   params: z.record(z.string(), z.unknown()).optional(),
   expectFinal: z.boolean().optional(),
   timeoutMs: z.number().int().positive().max(60_000).optional()
+});
+
+const chatSendSchema = z.object({
+  sessionKey: z.string().min(1).optional(),
+  message: z.string().min(1),
+  idempotencyKey: z.string().min(1).optional(),
+  thinking: z.string().optional(),
+  timeoutMs: z.number().int().positive().max(60_000).optional()
+});
+
+const chatHistorySchema = z.object({
+  sessionKey: z.string().min(1).optional(),
+  limit: z.number().int().positive().max(1000).optional()
 });
 
 export function buildServer(
@@ -113,6 +128,29 @@ export function buildServer(
       }
       throw error;
     }
+  });
+
+  app.post("/tenants/:tenantId/openclaw/chat/send", async (request) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    const body = chatSendSchema.parse(request.body);
+    const result = await openClawRuntimeAdapter.chatSend(params.tenantId, {
+      sessionKey: body.sessionKey ?? "main",
+      message: body.message,
+      idempotencyKey: body.idempotencyKey ?? randomUUID(),
+      thinking: body.thinking,
+      timeoutMs: body.timeoutMs
+    });
+    return { sessionKey: body.sessionKey ?? "main", result };
+  });
+
+  app.post("/tenants/:tenantId/openclaw/chat/history", async (request) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    const body = chatHistorySchema.parse(request.body);
+    const result = await openClawRuntimeAdapter.chatHistory(params.tenantId, {
+      sessionKey: body.sessionKey ?? "main",
+      limit: body.limit
+    });
+    return { sessionKey: body.sessionKey ?? "main", result };
   });
 
   return app;

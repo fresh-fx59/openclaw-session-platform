@@ -64,6 +64,12 @@ curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex
 curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/call \
   -H 'content-type: application/json' \
   -d '{"method":"status"}'
+curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/chat/send \
+  -H 'content-type: application/json' \
+  -d '{"sessionKey":"main","message":"Reply with exactly TENANT_OK and nothing else."}'
+curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/chat/history \
+  -H 'content-type: application/json' \
+  -d '{"sessionKey":"main","limit":20}'
 ```
 
 Live verification note:
@@ -72,6 +78,8 @@ Live verification note:
 - the OpenClaw gateway inside the container needs a short warm-up before `gateway status --json` reports `rpc.ok: true`
 - `GET /tenants/:tenantId/openclaw/status` now reports both raw container `state` and gateway `readiness`
 - `POST /tenants/:tenantId/openclaw/call` now relays a small allowlisted set of gateway methods through the tenant container
+- tenant containers can now bootstrap Anthropic auth from the existing host OpenClaw setup
+- `POST /tenants/:tenantId/openclaw/chat/send` and `/chat/history` now provide real chat interaction through the platform
 
 ## Test
 

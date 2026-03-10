@@ -31,7 +31,8 @@ async function main(): Promise<void> {
     containerStateDir: config.dataDir,
     hostStateDir: config.openClawRuntimeHostStateDir,
     image: config.openClawRuntimeImage,
-    network: config.openClawRuntimeNetwork
+    network: config.openClawRuntimeNetwork,
+    authSourceContainer: config.openClawRuntimeAuthSourceContainer
   });
   const reaper = new IdleReaper(runtimeManager, config.idleTimeoutMs);
   const metrics = new MetricsRegistry();

@@ -15,7 +15,7 @@ interface DockerExecLike {
 }
 
 interface DockerContainerLike {
-  inspect(): Promise<{ State?: { Status?: string } }>;
+  inspect(): Promise<{ State?: { Status?: string }; Config?: { Env?: string[] } }>;
   start(): Promise<void>;
   stop(): Promise<void>;
   exec(options: {
@@ -46,6 +46,7 @@ interface OpenClawRuntimeAdapterConfig {
   hostStateDir: string;
   image: string;
   network: string;
+  authSourceContainer: string;
 }
 
 export class OpenClawMethodNotAllowedError extends Error {
@@ -115,11 +116,12 @@ export class OpenClawRuntimeAdapter {
       return this.status(tenantId);
     }
 
+    const forwardedEnv = await this.resolveForwardedEnv();
     const container = await this.docker.createContainer({
       Image: this.config.image,
       name: runtime.containerName,
       Cmd: ["node", "openclaw.mjs", "gateway", "--allow-unconfigured", "--bind", "loopback", "--port", "18789"],
-      Env: ["HOME=/home/node", "TERM=xterm-256color"],
+      Env: ["HOME=/home/node", "TERM=xterm-256color", ...forwardedEnv],
       HostConfig: {
         Binds: [
           `${runtime.hostConfigPath}:/home/node/.openclaw`,
@@ -161,20 +163,37 @@ export class OpenClawRuntimeAdapter {
 
     const runtime = this.pathsForTenant(tenantId);
     const container = this.docker.getContainer(runtime.containerName);
-    const args = ["node", "openclaw.mjs", "gateway", "call", method, "--json"];
+    return this.execGatewayCall(container, method, params, options);
+  }
 
-    if (options.expectFinal) {
-      args.push("--expect-final");
+  async chatSend(
+    tenantId: string,
+    params: {
+      sessionKey: string;
+      message: string;
+      idempotencyKey: string;
+      thinking?: string;
+      timeoutMs?: number;
     }
+  ): Promise<unknown> {
+    const runtime = this.pathsForTenant(tenantId);
+    const container = this.docker.getContainer(runtime.containerName);
+    return this.execGatewayCall(container, "chat.send", params, {
+      expectFinal: true,
+      timeoutMs: params.timeoutMs
+    });
+  }
 
-    if (options.timeoutMs) {
-      args.push("--timeout", String(options.timeoutMs));
+  async chatHistory(
+    tenantId: string,
+    params: {
+      sessionKey: string;
+      limit?: number;
     }
-
-    args.push("--params", JSON.stringify(params));
-
-    const output = await this.execJson(container, args);
-    return JSON.parse(output) as unknown;
+  ): Promise<unknown> {
+    const runtime = this.pathsForTenant(tenantId);
+    const container = this.docker.getContainer(runtime.containerName);
+    return this.execGatewayCall(container, "chat.history", params);
   }
 
   private async inspectContainer(containerName: string): Promise<OpenClawTenantRuntimeStatus | null> {
@@ -265,6 +284,38 @@ export class OpenClawRuntimeAdapter {
     });
     const stream = await exec.start({ Detach: false, Tty: true });
     return readStream(stream);
+  }
+
+  private async execGatewayCall(
+    container: DockerContainerLike,
+    method: string,
+    params: Record<string, unknown>,
+    options: { expectFinal?: boolean; timeoutMs?: number } = {}
+  ): Promise<unknown> {
+    const args = ["node", "openclaw.mjs", "gateway", "call", method, "--json"];
+
+    if (options.expectFinal) {
+      args.push("--expect-final");
+    }
+
+    if (options.timeoutMs) {
+      args.push("--timeout", String(options.timeoutMs));
+    }
+
+    args.push("--params", JSON.stringify(params));
+
+    const output = await this.execJson(container, args);
+    return JSON.parse(output) as unknown;
+  }
+
+  private async resolveForwardedEnv(): Promise<string[]> {
+    try {
+      const details = await this.docker.getContainer(this.config.authSourceContainer).inspect();
+      const env = details.Config?.Env ?? [];
+      return env.filter((entry) => entry.startsWith("ANTHROPIC_API_KEY="));
+    } catch {
+      return [];
+    }
   }
 
   private pathsForTenant(tenantId: string) {

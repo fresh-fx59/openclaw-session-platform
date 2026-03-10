@@ -9,6 +9,8 @@ This layer prepares and manages a real OpenClaw gateway container per tenant.
 - `GET /tenants/:tenantId/openclaw/status`
 - `POST /tenants/:tenantId/openclaw/stop`
 - `POST /tenants/:tenantId/openclaw/call`
+- `POST /tenants/:tenantId/openclaw/chat/send`
+- `POST /tenants/:tenantId/openclaw/chat/history`
 
 ## Behavior
 
@@ -18,6 +20,7 @@ This layer prepares and manages a real OpenClaw gateway container per tenant.
 - mounts tenant config/workspace into the OpenClaw container
 - keeps container lifecycle separate from the platform metadata plane
 - relays a narrow allowlisted set of gateway methods through the tenant container
+- forwards `ANTHROPIC_API_KEY` from the approved source OpenClaw container into tenant containers at creation time
 
 ## Verified Live Result
 
@@ -36,6 +39,7 @@ Observed result:
 - after restarting the `openclaw-session-platform` app container, the tenant OpenClaw container remained up and the platform status endpoint still reported `running`
 - the platform status endpoint now also reports readiness fields such as `readiness`, `rpcOk`, `rpcUrl`, and `readinessDetail`
 - the platform gateway-call endpoint successfully relayed `status` and `health` through the tenant container
+- the platform chat endpoints successfully sent and retrieved Anthropic-backed tenant messages
 
 ## Operational Note
 
@@ -56,3 +60,15 @@ The initial public bridge is intentionally narrow:
 - `cron.*`
 
 Methods outside this allowlist are rejected with `400 method_not_allowed`.
+
+## Anthropic bootstrap
+
+The current deployment bootstraps tenant chat execution by reusing the approved
+host OpenClaw Anthropic setup:
+
+- source container: `openclaw-gateway`
+- forwarded env: `ANTHROPIC_API_KEY`
+
+The repo does not hardcode the secret value. The runtime adapter reads the env
+from the source container through the Docker socket and forwards it only when
+creating a tenant container.

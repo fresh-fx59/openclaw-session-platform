@@ -29,6 +29,7 @@ services:
       OPENCLAW_RUNTIME_IMAGE: openclaw-demo-openclaw-gateway:latest
       OPENCLAW_RUNTIME_NETWORK: openclaw-session-platform_internal
       OPENCLAW_RUNTIME_HOST_STATE_DIR: /home/claude-developer/openclaw-session-platform/runtime-data
+      OPENCLAW_RUNTIME_AUTH_SOURCE_CONTAINER: openclaw-gateway
     volumes:
       - ./runtime-data:/app/state
       - /var/run/docker.sock:/var/run/docker.sock

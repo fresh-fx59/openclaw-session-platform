@@ -45,3 +45,5 @@ The OpenClaw runtime adapter is now verified live on the deployment host:
 - runtime readiness is not identical to container liveness; the gateway process needs a short warm-up before RPC becomes healthy
 - the platform status endpoint now exposes both Docker `state` and gateway `readiness`
 - the platform now exposes a narrow interaction bridge for safe allowlisted gateway methods
+- tenant runtimes can now bootstrap Anthropic auth from the approved host OpenClaw deployment
+- the platform now exposes first-class chat send/history routes on top of Gateway `chat.*`

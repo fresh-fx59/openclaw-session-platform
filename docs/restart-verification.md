@@ -44,3 +44,4 @@ The real OpenClaw runtime adapter was also verified live after restart:
 - after app restart, `GET /tenants/runtime-proof-4/openclaw/status` still reported `state: running`
 - after app restart, `GET /tenants/runtime-proof-4/openclaw/status` also reported `readiness: ready` and `rpcOk: true`
 - after app restart, `POST /tenants/runtime-proof-4/openclaw/call` with `{"method":"status"}` still returned the tenant gateway status payload
+- after app restart, `POST /tenants/chat-proof/openclaw/chat/send` and `/chat/history` still returned Anthropic-backed tenant replies

@@ -9,6 +9,7 @@ export interface AppConfig {
   openClawRuntimeImage: string;
   openClawRuntimeNetwork: string;
   openClawRuntimeHostStateDir: string;
+  openClawRuntimeAuthSourceContainer: string;
 }
 
 export function loadConfig(): AppConfig {
@@ -25,6 +26,8 @@ export function loadConfig(): AppConfig {
     openClawRuntimeImage: process.env.OPENCLAW_RUNTIME_IMAGE ?? "openclaw-demo-openclaw-gateway:latest",
     openClawRuntimeNetwork: process.env.OPENCLAW_RUNTIME_NETWORK ?? "openclaw-session-platform_internal",
     openClawRuntimeHostStateDir:
-      process.env.OPENCLAW_RUNTIME_HOST_STATE_DIR ?? "/home/claude-developer/openclaw-session-platform/runtime-data"
+      process.env.OPENCLAW_RUNTIME_HOST_STATE_DIR ?? "/home/claude-developer/openclaw-session-platform/runtime-data",
+    openClawRuntimeAuthSourceContainer:
+      process.env.OPENCLAW_RUNTIME_AUTH_SOURCE_CONTAINER ?? "openclaw-gateway"
   };
 }
