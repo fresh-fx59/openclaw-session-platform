@@ -18,3 +18,15 @@ This repository was verified against the live deployment with the following sequ
 - stale in-memory runtime leases do not survive restart
 - first request after restart creates a new runtime
 - tenant context still resumes from durable state
+
+## Verified result
+
+Verified on the live deployment at `https://openclaw-session-platform.aiengineerhelper.com`:
+
+- tenant metadata persisted in Postgres across container restart
+- durable artifact file remained present after restart
+- `current_runtime_id` was cleared on boot as designed
+- `GET /tenants/:tenantId/status` returned inactive immediately after restart
+- the next `dispatch` created a fresh runtime id and resumed persisted context
+
+GitHub Actions CI also passed for the corresponding push that introduced the Postgres-backed store and Docker smoke validation.
