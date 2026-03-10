@@ -38,6 +38,17 @@ export interface CompiledTenantContext {
   artifacts: ArtifactRecord[];
 }
 
+export interface OpenClawTenantRuntimeStatus {
+  tenantId: string;
+  containerName: string;
+  image: string;
+  configPath: string;
+  workspacePath: string;
+  hostConfigPath: string;
+  hostWorkspacePath: string;
+  state: "not_found" | "created" | "running" | "exited" | "unknown";
+}
+
 export interface PlatformState {
   tenants: Record<string, TenantState>;
   runtimes: Record<string, RuntimeRecord>;

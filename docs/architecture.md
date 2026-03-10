@@ -12,6 +12,7 @@ The MVP separates durable tenant state from ephemeral runtime state.
 
 - `StateStore`: persists tenant and runtime metadata in Postgres
 - `ContextCompiler`: builds a compact tenant resume payload from durable metadata
+- `OpenClawRuntimeAdapter`: prepares and manages real tenant-scoped OpenClaw gateway containers
 - `WorkspaceStore`: persists per-tenant workspace and artifact files
 - `RuntimeManager`: keeps one active runtime lease per tenant
 - `IdleReaper`: stops inactive runtimes
@@ -35,3 +36,10 @@ Ephemeral:
 This lets a runtime terminate while the next runtime resumes the same tenant state.
 
 On process restart, active runtime leases are explicitly reset so the platform never claims a stale in-memory runtime is still live.
+
+The OpenClaw runtime adapter is now verified live on the deployment host:
+
+- it prepares per-tenant OpenClaw config and workspace directories on the durable host volume
+- it starts a real `openclaw-demo-openclaw-gateway:latest` tenant container through the Docker socket
+- the tenant OpenClaw container stays alive across `openclaw-session-platform` container restarts
+- runtime readiness is not identical to container liveness; the gateway process needs a short warm-up before RPC becomes healthy

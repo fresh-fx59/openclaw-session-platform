@@ -19,6 +19,7 @@ The current MVP uses:
 - local filesystem for workspaces and artifacts
 - Postgres for metadata state
 - in-process runtime manager
+- Docker-managed real OpenClaw tenant gateway containers
 - Fastify HTTP API
 
 ## Run
@@ -47,9 +48,25 @@ Current server deployment:
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/healthz`
 - Metrics URL: `https://openclaw-session-platform.aiengineerhelper.com/metrics`
 - Context URL example: `https://openclaw-session-platform.aiengineerhelper.com/tenants/<tenantId>/context`
+- OpenClaw runtime status URL example: `https://openclaw-session-platform.aiengineerhelper.com/tenants/<tenantId>/openclaw/status`
 
 Restart verification notes: [`docs/restart-verification.md`](docs/restart-verification.md)
 Context compiler notes: [`docs/context-compiler.md`](docs/context-compiler.md)
+OpenClaw runtime adapter notes: [`docs/openclaw-runtime-adapter.md`](docs/openclaw-runtime-adapter.md)
+
+## Runtime Adapter API
+
+```bash
+curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/prepare
+curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/start
+curl https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/status
+curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/stop
+```
+
+Live verification note:
+
+- the tenant container reaches Docker `running` state immediately after start
+- the OpenClaw gateway inside the container needs a short warm-up before `gateway status --json` reports `rpc.ok: true`
 
 ## Test
 

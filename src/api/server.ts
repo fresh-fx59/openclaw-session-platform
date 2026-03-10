@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { TenantContextCompiler } from "../context/compiler.js";
 import { MetricsRegistry } from "../metrics/registry.js";
+import { OpenClawRuntimeAdapter } from "../openclaw/runtime-adapter.js";
 import { RuntimeManager } from "../runtime/runtime-manager.js";
 
 const dispatchSchema = z.object({
@@ -15,7 +16,8 @@ const dispatchSchema = z.object({
 export function buildServer(
   runtimeManager: RuntimeManager,
   metrics: MetricsRegistry,
-  contextCompiler: TenantContextCompiler
+  contextCompiler: TenantContextCompiler,
+  openClawRuntimeAdapter: OpenClawRuntimeAdapter
 ) {
   const app = Fastify({ logger: true });
 
@@ -65,6 +67,26 @@ export function buildServer(
     const stopped = await runtimeManager.stopRuntime(params.tenantId);
     metrics.activeRuntimes.set(runtimeManager.getActiveRuntimeCount());
     return { stopped };
+  });
+
+  app.post("/tenants/:tenantId/openclaw/prepare", async (request) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    return openClawRuntimeAdapter.prepareTenant(params.tenantId);
+  });
+
+  app.post("/tenants/:tenantId/openclaw/start", async (request) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    return openClawRuntimeAdapter.start(params.tenantId);
+  });
+
+  app.get("/tenants/:tenantId/openclaw/status", async (request) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    return openClawRuntimeAdapter.status(params.tenantId);
+  });
+
+  app.post("/tenants/:tenantId/openclaw/stop", async (request) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    return openClawRuntimeAdapter.stop(params.tenantId);
   });
 
   return app;

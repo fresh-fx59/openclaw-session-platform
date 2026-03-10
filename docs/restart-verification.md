@@ -35,3 +35,10 @@ The context compiler endpoint was also verified live after restart:
 
 - `GET /tenants/:tenantId/context` preserved memory summary and artifact manifest
 - `currentRuntimeId` was reset to `null` after restart
+
+The real OpenClaw runtime adapter was also verified live after restart:
+
+- `POST /tenants/runtime-proof-4/openclaw/start` created a real tenant container on the Docker host
+- `docker exec openclaw-tenant-runtime-proof-4 node openclaw.mjs gateway status --json` reported `rpc.ok: true` after warm-up
+- restarting the `openclaw-session-platform` app container did not terminate the tenant OpenClaw container
+- after app restart, `GET /tenants/runtime-proof-4/openclaw/status` still reported `running`

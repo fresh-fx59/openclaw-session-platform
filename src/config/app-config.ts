@@ -5,6 +5,10 @@ export interface AppConfig {
   dataDir: string;
   idleTimeoutMs: number;
   databaseUrl: string;
+  dockerSocketPath: string;
+  openClawRuntimeImage: string;
+  openClawRuntimeNetwork: string;
+  openClawRuntimeHostStateDir: string;
 }
 
 export function loadConfig(): AppConfig {
@@ -16,6 +20,11 @@ export function loadConfig(): AppConfig {
     port: Number(process.env.PORT ?? 8080),
     dataDir,
     idleTimeoutMs: Number(process.env.OPENCLAW_SESSION_PLATFORM_IDLE_TIMEOUT_MS ?? 15 * 60 * 1000),
-    databaseUrl: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@postgres:5432/openclaw_session_platform"
+    databaseUrl: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@postgres:5432/openclaw_session_platform",
+    dockerSocketPath: process.env.DOCKER_SOCKET_PATH ?? "/var/run/docker.sock",
+    openClawRuntimeImage: process.env.OPENCLAW_RUNTIME_IMAGE ?? "openclaw-demo-openclaw-gateway:latest",
+    openClawRuntimeNetwork: process.env.OPENCLAW_RUNTIME_NETWORK ?? "openclaw-session-platform_internal",
+    openClawRuntimeHostStateDir:
+      process.env.OPENCLAW_RUNTIME_HOST_STATE_DIR ?? "/home/claude-developer/openclaw-session-platform/runtime-data"
   };
 }

@@ -25,8 +25,13 @@ services:
       OPENCLAW_SESSION_PLATFORM_IDLE_TIMEOUT_MS: 900000
       OPENCLAW_SESSION_PLATFORM_DATA_DIR: /app/state
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/openclaw_session_platform
+      DOCKER_SOCKET_PATH: /var/run/docker.sock
+      OPENCLAW_RUNTIME_IMAGE: openclaw-demo-openclaw-gateway:latest
+      OPENCLAW_RUNTIME_NETWORK: openclaw-session-platform_internal
+      OPENCLAW_RUNTIME_HOST_STATE_DIR: /home/claude-developer/openclaw-session-platform/runtime-data
     volumes:
       - ./runtime-data:/app/state
+      - /var/run/docker.sock:/var/run/docker.sock
     restart: unless-stopped
     depends_on:
       postgres:
