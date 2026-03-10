@@ -4,6 +4,7 @@ export interface AppConfig {
   port: number;
   dataDir: string;
   idleTimeoutMs: number;
+  databaseUrl: string;
 }
 
 export function loadConfig(): AppConfig {
@@ -14,6 +15,7 @@ export function loadConfig(): AppConfig {
   return {
     port: Number(process.env.PORT ?? 8080),
     dataDir,
-    idleTimeoutMs: Number(process.env.OPENCLAW_SESSION_PLATFORM_IDLE_TIMEOUT_MS ?? 15 * 60 * 1000)
+    idleTimeoutMs: Number(process.env.OPENCLAW_SESSION_PLATFORM_IDLE_TIMEOUT_MS ?? 15 * 60 * 1000),
+    databaseUrl: process.env.DATABASE_URL ?? "postgresql://postgres:postgres@postgres:5432/openclaw_session_platform"
   };
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import type { DispatchRequest, DispatchResult, RuntimeRecord, TenantState } from "../domain/types.js";
-import { JsonStateStore } from "../store/state-store.js";
+import type { StateStore } from "../store/state-store.js";
 import { WorkspaceStore } from "../store/workspace-store.js";
 
 interface ActiveRuntime {
@@ -15,7 +15,7 @@ export class RuntimeManager {
   private readonly activeRuntimes = new Map<string, ActiveRuntime>();
 
   constructor(
-    private readonly stateStore: JsonStateStore,
+    private readonly stateStore: StateStore,
     private readonly workspaceStore: WorkspaceStore
   ) {}
 

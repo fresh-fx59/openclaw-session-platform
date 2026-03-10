@@ -4,13 +4,39 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
+import type { RuntimeRecord, TenantState } from "../src/domain/types.js";
 import { RuntimeManager } from "../src/runtime/runtime-manager.js";
-import { JsonStateStore } from "../src/store/state-store.js";
+import type { StateStore } from "../src/store/state-store.js";
 import { WorkspaceStore } from "../src/store/workspace-store.js";
+
+class InMemoryStateStore implements StateStore {
+  private tenants = new Map<string, TenantState>();
+  private runtimes = new Map<string, RuntimeRecord>();
+
+  async initialize(): Promise<void> {}
+  async close(): Promise<void> {}
+  async resetActiveRuntimesOnBoot(): Promise<void> {}
+
+  async getTenant(tenantId: string): Promise<TenantState | null> {
+    return this.tenants.get(tenantId) ?? null;
+  }
+
+  async upsertTenant(tenant: TenantState): Promise<void> {
+    this.tenants.set(tenant.tenantId, tenant);
+  }
+
+  async upsertRuntime(runtime: RuntimeRecord): Promise<void> {
+    this.runtimes.set(runtime.runtimeId, runtime);
+  }
+
+  async getRuntime(runtimeId: string): Promise<RuntimeRecord | null> {
+    return this.runtimes.get(runtimeId) ?? null;
+  }
+}
 
 async function buildSubject() {
   const root = await mkdtemp(join(tmpdir(), "openclo-platform-"));
-  const stateStore = new JsonStateStore(join(root, "state.json"));
+  const stateStore = new InMemoryStateStore();
   const workspaceStore = new WorkspaceStore(join(root, "workspaces"), join(root, "artifacts"));
   const runtimeManager = new RuntimeManager(stateStore, workspaceStore);
   return { root, stateStore, workspaceStore, runtimeManager };

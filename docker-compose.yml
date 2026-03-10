@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: openclaw-session-platform-postgres
+    environment:
+      POSTGRES_DB: openclaw_session_platform
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d openclaw_session_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - internal
+
   openclaw-session-platform:
     build: .
     container_name: openclaw-session-platform
@@ -6,17 +24,26 @@ services:
       PORT: 8080
       OPENCLAW_SESSION_PLATFORM_IDLE_TIMEOUT_MS: 900000
       OPENCLAW_SESSION_PLATFORM_DATA_DIR: /app/state
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/openclaw_session_platform
     volumes:
       - ./runtime-data:/app/state
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
       interval: 30s
       timeout: 5s
       retries: 3
     networks:
+      - internal
       - traefik-public
 
 networks:
+  internal:
   traefik-public:
     external: true
+
+volumes:
+  postgres-data:

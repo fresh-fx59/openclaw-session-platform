@@ -10,7 +10,7 @@ The MVP separates durable tenant state from ephemeral runtime state.
 
 ## Components
 
-- `StateStore`: persists tenant and runtime metadata
+- `StateStore`: persists tenant and runtime metadata in Postgres
 - `WorkspaceStore`: persists per-tenant workspace and artifact files
 - `RuntimeManager`: keeps one active runtime lease per tenant
 - `IdleReaper`: stops inactive runtimes
@@ -22,7 +22,7 @@ Durable:
 
 - tenant workspace files
 - artifact files
-- runtime metadata and lifecycle state
+- runtime metadata and lifecycle state in Postgres
 - request history log
 
 Ephemeral:
@@ -31,3 +31,5 @@ Ephemeral:
 - in-memory timers
 
 This lets a runtime terminate while the next runtime resumes the same tenant state.
+
+On process restart, active runtime leases are explicitly reset so the platform never claims a stale in-memory runtime is still live.

@@ -16,7 +16,7 @@ This repository implements a minimal platform that provides:
 The current MVP uses:
 
 - local filesystem for workspaces and artifacts
-- JSON file state store
+- Postgres for metadata state
 - in-process runtime manager
 - Fastify HTTP API
 
@@ -33,7 +33,12 @@ npm run dev
 docker compose up -d --build
 ```
 
-The container joins the existing `traefik-public` Docker network and is intended to be published behind Traefik + Cloudflare.
+The stack runs as tiny containers:
+
+- `openclaw-session-platform`
+- `postgres:16-alpine`
+
+The app container joins the existing `traefik-public` Docker network and is intended to be published behind Traefik + Cloudflare.
 
 Current server deployment:
 
@@ -41,8 +46,12 @@ Current server deployment:
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/healthz`
 - Metrics URL: `https://openclaw-session-platform.aiengineerhelper.com/metrics`
 
+Restart verification notes: [`docs/restart-verification.md`](docs/restart-verification.md)
+
 ## Test
 
 ```bash
 npm test
 ```
+
+GitHub Actions runs build, test, and Docker build smoke on every push to `main`.

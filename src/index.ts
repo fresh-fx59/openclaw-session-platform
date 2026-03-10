@@ -1,19 +1,24 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 
+import { Pool } from "pg";
 import { buildServer } from "./api/server.js";
 import { loadConfig } from "./config/app-config.js";
 import { MetricsRegistry } from "./metrics/registry.js";
 import { IdleReaper } from "./reaper/idle-reaper.js";
 import { RuntimeManager } from "./runtime/runtime-manager.js";
-import { JsonStateStore } from "./store/state-store.js";
+import { PostgresStateStore } from "./store/postgres-state-store.js";
 import { WorkspaceStore } from "./store/workspace-store.js";
 
 async function main(): Promise<void> {
   const config = loadConfig();
   await mkdir(config.dataDir, { recursive: true });
 
-  const stateStore = new JsonStateStore(join(config.dataDir, "state.json"));
+  const pool = new Pool({ connectionString: config.databaseUrl });
+  const stateStore = new PostgresStateStore(pool);
+  await stateStore.initialize();
+  await stateStore.resetActiveRuntimesOnBoot();
+
   const workspaceStore = new WorkspaceStore(
     join(config.dataDir, "workspaces"),
     join(config.dataDir, "artifacts")
@@ -29,6 +34,7 @@ async function main(): Promise<void> {
   const shutdown = async () => {
     reaper.stop();
     await server.close();
+    await stateStore.close();
   };
 
   process.on("SIGINT", () => void shutdown());
