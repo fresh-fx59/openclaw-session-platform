@@ -21,6 +21,7 @@ The current MVP uses:
 - in-process runtime manager
 - Docker-managed real OpenClaw tenant gateway containers
 - Fastify HTTP API
+- minimal browser UI served by the same Fastify app
 
 ## Run
 
@@ -45,6 +46,7 @@ The app container joins the existing `traefik-public` Docker network and is inte
 Current server deployment:
 
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/`
+- UI URL: `https://openclaw-session-platform.aiengineerhelper.com/ui`
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/healthz`
 - Metrics URL: `https://openclaw-session-platform.aiengineerhelper.com/metrics`
 - Context URL example: `https://openclaw-session-platform.aiengineerhelper.com/tenants/<tenantId>/context`
@@ -80,6 +82,21 @@ Live verification note:
 - `POST /tenants/:tenantId/openclaw/call` now relays a small allowlisted set of gateway methods through the tenant container
 - tenant containers can now bootstrap Anthropic auth from the existing host OpenClaw setup
 - `POST /tenants/:tenantId/openclaw/chat/send` and `/chat/history` now provide real chat interaction through the platform
+
+## UI
+
+The app now exposes a minimal UI at `/ui`.
+
+Current UI capabilities:
+
+- set a tenant id and session key
+- prepare, start, stop, and refresh a tenant runtime
+- inspect runtime readiness and raw status payloads
+- send a message into the selected session
+- load session history for manual persistence checks
+
+The UI is intentionally thin and uses the existing API directly. There is no
+separate frontend build pipeline in this first pass.
 
 ## Test
 

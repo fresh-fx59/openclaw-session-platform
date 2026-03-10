@@ -7,6 +7,7 @@ import { TenantContextCompiler } from "../context/compiler.js";
 import { MetricsRegistry } from "../metrics/registry.js";
 import { OpenClawMethodNotAllowedError, OpenClawRuntimeAdapter } from "../openclaw/runtime-adapter.js";
 import { RuntimeManager } from "../runtime/runtime-manager.js";
+import { renderUiHtml, uiAppJs, uiStylesCss } from "../ui/assets.js";
 
 const dispatchSchema = z.object({
   prompt: z.string().min(1),
@@ -47,10 +48,26 @@ export function buildServer(
     service: "openclaw-session-platform",
     status: "ok",
     endpoints: {
+      ui: "/ui",
       healthz: "/healthz",
       metrics: "/metrics"
     }
   }));
+
+  app.get("/ui", async (_request, reply) => {
+    reply.type("text/html; charset=utf-8");
+    return renderUiHtml();
+  });
+
+  app.get("/ui/styles.css", async (_request, reply) => {
+    reply.type("text/css; charset=utf-8");
+    return uiStylesCss;
+  });
+
+  app.get("/ui/app.js", async (_request, reply) => {
+    reply.type("application/javascript; charset=utf-8");
+    return uiAppJs;
+  });
 
   app.get("/healthz", async () => ({ ok: true }));
 

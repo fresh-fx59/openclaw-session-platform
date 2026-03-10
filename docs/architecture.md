@@ -17,6 +17,7 @@ The MVP separates durable tenant state from ephemeral runtime state.
 - `RuntimeManager`: keeps one active runtime lease per tenant
 - `IdleReaper`: stops inactive runtimes
 - `API`: dispatch, lifecycle, readiness, and allowlisted gateway-call endpoints
+- `UI`: minimal browser console served from the same Fastify app for manual tenant/session operation
 
 ## Durability model
 
@@ -47,3 +48,4 @@ The OpenClaw runtime adapter is now verified live on the deployment host:
 - the platform now exposes a narrow interaction bridge for safe allowlisted gateway methods
 - tenant runtimes can now bootstrap Anthropic auth from the approved host OpenClaw deployment
 - the platform now exposes first-class chat send/history routes on top of Gateway `chat.*`
+- the platform now exposes a thin `/ui` browser surface for manual runtime and session testing without Postman or curl
