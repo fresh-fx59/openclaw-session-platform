@@ -18,6 +18,7 @@ interface DockerContainerLike {
   inspect(): Promise<{ State?: { Status?: string }; Config?: { Env?: string[] } }>;
   start(): Promise<void>;
   stop(): Promise<void>;
+  remove(options?: { force?: boolean }): Promise<void>;
   exec(options: {
     Cmd: string[];
     AttachStdout: boolean;
@@ -106,17 +107,29 @@ export class OpenClawRuntimeAdapter {
     const runtime = this.pathsForTenant(tenantId);
     await this.prepareTenant(tenantId);
     const existing = await this.inspectContainer(runtime.containerName);
+    const forwardedEnv = await this.resolveForwardedEnv();
 
     if (existing) {
-      if (existing.state === "running") {
-        return existing;
-      }
       const container = this.docker.getContainer(runtime.containerName);
-      await container.start();
-      return this.status(tenantId);
+      const details = await container.inspect();
+      if (this.needsContainerRecreate(details.Config?.Env ?? [], forwardedEnv)) {
+        try {
+          if (existing.state === "running") {
+            await container.stop();
+          }
+        } catch {
+          // Remove below will force cleanup if the container already exited or stop fails.
+        }
+        await container.remove({ force: true });
+      } else {
+        if (existing.state === "running") {
+          return existing;
+        }
+        await container.start();
+        return this.status(tenantId);
+      }
     }
 
-    const forwardedEnv = await this.resolveForwardedEnv();
     const container = await this.docker.createContainer({
       Image: this.config.image,
       name: runtime.containerName,
@@ -312,10 +325,15 @@ export class OpenClawRuntimeAdapter {
     try {
       const details = await this.docker.getContainer(this.config.authSourceContainer).inspect();
       const env = details.Config?.Env ?? [];
-      return env.filter((entry) => entry.startsWith("ANTHROPIC_API_KEY="));
+      return env.filter((entry) => shouldForwardSourceEnv(entry));
     } catch {
       return [];
     }
+  }
+
+  private needsContainerRecreate(currentEnv: string[], forwardedEnv: string[]): boolean {
+    const currentSet = new Set(currentEnv);
+    return forwardedEnv.some((entry) => !currentSet.has(entry));
   }
 
   private pathsForTenant(tenantId: string) {
@@ -355,4 +373,12 @@ async function readStream(stream: NodeJS.ReadableStream): Promise<string> {
 
 function isAllowedGatewayMethod(method: string): boolean {
   return ALLOWED_GATEWAY_METHODS.some((pattern) => pattern.test(method));
+}
+
+function shouldForwardSourceEnv(entry: string): boolean {
+  return (
+    entry.startsWith("ANTHROPIC_API_KEY=") ||
+    entry.startsWith("CLOUDRU_API_KEY=") ||
+    entry.startsWith("MOONSHOT_API_KEY=")
+  );
 }

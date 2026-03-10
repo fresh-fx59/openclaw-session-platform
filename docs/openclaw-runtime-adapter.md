@@ -20,7 +20,8 @@ This layer prepares and manages a real OpenClaw gateway container per tenant.
 - mounts tenant config/workspace into the OpenClaw container
 - keeps container lifecycle separate from the platform metadata plane
 - relays a narrow allowlisted set of gateway methods through the tenant container
-- forwards `ANTHROPIC_API_KEY` from the approved source OpenClaw container into tenant containers at creation time
+- forwards provider auth env from the approved source OpenClaw container into tenant containers at creation time
+- recreates a tenant container on `start` if required forwarded auth env is missing from an older tenant container
 
 ## Verified Live Result
 
@@ -61,14 +62,16 @@ The initial public bridge is intentionally narrow:
 
 Methods outside this allowlist are rejected with `400 method_not_allowed`.
 
-## Anthropic bootstrap
+## Provider bootstrap
 
-The current deployment bootstraps tenant chat execution by reusing the approved
-host OpenClaw Anthropic setup:
+The current deployment bootstraps tenant model auth by reusing provider env from
+the approved host OpenClaw gateway container:
 
 - source container: `openclaw-gateway`
-- forwarded env: `ANTHROPIC_API_KEY`
+- forwarded env today: `ANTHROPIC_API_KEY`, `CLOUDRU_API_KEY`, `MOONSHOT_API_KEY`
 
-The repo does not hardcode the secret value. The runtime adapter reads the env
-from the source container through the Docker socket and forwards it only when
-creating a tenant container.
+The repo does not hardcode secret values. The runtime adapter reads the env from
+the source container through the Docker socket and forwards them into tenant
+containers at creation time. If a tenant container was created before these env
+were forwarded, the platform now recreates that tenant container on the next
+`start` so the auth env becomes effective.

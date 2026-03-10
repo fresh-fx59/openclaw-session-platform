@@ -17,6 +17,7 @@ class FakeExec {
 
 class FakeContainer {
   lastEnv: string[] | null = null;
+  removed = false;
 
   constructor(
     private status: string = "created",
@@ -64,6 +65,11 @@ class FakeContainer {
 
   async stop() {
     this.status = "exited";
+  }
+
+  async remove() {
+    this.removed = true;
+    this.status = "removed";
   }
 
   async exec(options: { Cmd: string[] }) {
@@ -232,5 +238,36 @@ describe("OpenClawRuntimeAdapter", () => {
         }
       ]
     });
+  });
+
+  test("recreates an existing tenant container when forwarded provider env drifted", async () => {
+    const root = await mkdtemp(join(tmpdir(), "openclaw-adapter-"));
+    const docker = new FakeDocker();
+    docker.containers.set(
+      "openclaw-gateway",
+      new FakeContainer("running", undefined, undefined, [
+        "ANTHROPIC_API_KEY=test-key",
+        "CLOUDRU_API_KEY=cloudru-key"
+      ])
+    );
+    docker.containers.set("openclaw-tenant-drift-tenant", new FakeContainer("running"));
+
+    const adapter = new OpenClawRuntimeAdapter(docker as never, {
+      containerStateDir: root,
+      hostStateDir: root,
+      image: "openclaw-demo-openclaw-gateway:latest",
+      network: "internal",
+      authSourceContainer: "openclaw-gateway"
+    });
+
+    const started = await adapter.start("drift-tenant");
+
+    expect(started.state).toBe("running");
+    expect(docker.containers.get("openclaw-tenant-drift-tenant")?.lastEnv).toContain(
+      "ANTHROPIC_API_KEY=test-key"
+    );
+    expect(docker.containers.get("openclaw-tenant-drift-tenant")?.lastEnv).toContain(
+      "CLOUDRU_API_KEY=cloudru-key"
+    );
   });
 });

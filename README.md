@@ -98,6 +98,10 @@ Current UI capabilities:
 The UI is intentionally thin and uses the existing API directly. There is no
 separate frontend build pipeline in this first pass.
 
+The chat flow now polls session history briefly after `chat.send` so the browser
+can display an assistant reply even though Gateway `chat.send` itself is
+non-blocking.
+
 ## Test
 
 ```bash

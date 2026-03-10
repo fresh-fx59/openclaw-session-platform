@@ -49,3 +49,4 @@ The OpenClaw runtime adapter is now verified live on the deployment host:
 - tenant runtimes can now bootstrap Anthropic auth from the approved host OpenClaw deployment
 - the platform now exposes first-class chat send/history routes on top of Gateway `chat.*`
 - the platform now exposes a thin `/ui` browser surface for manual runtime and session testing without Postman or curl
+- tenant runtime bootstrap now recreates stale tenant containers when required provider auth env drifted, so chat can recover after older bootstrap versions

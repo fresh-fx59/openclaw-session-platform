@@ -437,6 +437,30 @@ function renderHistory(payload) {
   writePre(historyOutput, payload);
 }
 
+async function loadHistory(limit = 50) {
+  return api("/tenants/" + encodeURIComponent(requireTenant()) + "/openclaw/chat/history", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ sessionKey: sessionKey(), limit })
+  });
+}
+
+async function waitForAssistantReply(previousCount, attempts = 12, delayMs = 1000) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const payload = await loadHistory(50);
+    renderHistory(payload);
+    const messages = payload && payload.result && Array.isArray(payload.result.messages)
+      ? payload.result.messages
+      : [];
+    const hasAssistantReply = messages.length > previousCount && messages.some((message) => message.role === "assistant");
+    if (hasAssistantReply) {
+      return payload;
+    }
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return loadHistory(50);
+}
+
 async function refreshStatus() {
   const value = requireTenant();
   const payload = await api("/tenants/" + encodeURIComponent(value) + "/openclaw/status");
@@ -495,11 +519,7 @@ buttons.stop.addEventListener("click", async () => {
 
 buttons.history.addEventListener("click", async () => {
   await run("history ok", async () => {
-    const payload = await api("/tenants/" + encodeURIComponent(requireTenant()) + "/openclaw/chat/history", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionKey: sessionKey(), limit: 50 })
-    });
+    const payload = await loadHistory(50);
     renderHistory(payload);
     return payload;
   });
@@ -511,6 +531,11 @@ buttons.send.addEventListener("click", async () => {
     if (!message) {
       throw new Error("Message is required.");
     }
+    const beforeHistory = await loadHistory(50);
+    const previousCount = beforeHistory && beforeHistory.result && Array.isArray(beforeHistory.result.messages)
+      ? beforeHistory.result.messages.length
+      : 0;
+    renderHistory(beforeHistory);
     const payload = await api("/tenants/" + encodeURIComponent(requireTenant()) + "/openclaw/chat/send", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -522,11 +547,8 @@ buttons.send.addEventListener("click", async () => {
     });
     messageInput.value = "";
     await refreshStatus().catch(() => {});
-    const history = await api("/tenants/" + encodeURIComponent(requireTenant()) + "/openclaw/chat/history", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ sessionKey: sessionKey(), limit: 50 })
-    });
+    setBadge(historyBadge, "waiting", "warn");
+    const history = await waitForAssistantReply(previousCount);
     renderHistory(history);
     return payload;
   });
