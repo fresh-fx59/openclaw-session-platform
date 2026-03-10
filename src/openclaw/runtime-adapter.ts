@@ -2,15 +2,26 @@ import { randomUUID } from "node:crypto";
 import { chmod, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { PassThrough } from "node:stream";
 
 import Dockerode from "dockerode";
 
 import type { OpenClawTenantRuntimeStatus } from "../domain/types.js";
 
+interface DockerExecLike {
+  start(options: { Detach: boolean; Tty: boolean }): Promise<NodeJS.ReadableStream>;
+}
+
 interface DockerContainerLike {
   inspect(): Promise<{ State?: { Status?: string } }>;
   start(): Promise<void>;
   stop(): Promise<void>;
+  exec(options: {
+    Cmd: string[];
+    AttachStdout: boolean;
+    AttachStderr: boolean;
+    Tty: boolean;
+  }): Promise<DockerExecLike>;
 }
 
 interface DockerClientLike {
@@ -147,7 +158,8 @@ export class OpenClawRuntimeAdapter {
         workspacePath: runtime.workspacePath,
         hostConfigPath: runtime.hostConfigPath,
         hostWorkspacePath: runtime.hostWorkspacePath,
-        state
+        state,
+        ...(await this.readinessForContainer(this.docker.getContainer(containerName), state))
       };
     } catch {
       return null;
@@ -164,8 +176,54 @@ export class OpenClawRuntimeAdapter {
       workspacePath: runtime.workspacePath,
       hostConfigPath: runtime.hostConfigPath,
       hostWorkspacePath: runtime.hostWorkspacePath,
-      state: "not_found"
+      state: "not_found",
+      readiness: "not_applicable",
+      rpcOk: false,
+      rpcUrl: null,
+      readinessDetail: null
     };
+  }
+
+  private async readinessForContainer(
+    container: DockerContainerLike,
+    state: OpenClawTenantRuntimeStatus["state"]
+  ): Promise<Pick<OpenClawTenantRuntimeStatus, "readiness" | "rpcOk" | "rpcUrl" | "readinessDetail">> {
+    if (state !== "running") {
+      return {
+        readiness: "not_applicable",
+        rpcOk: false,
+        rpcUrl: null,
+        readinessDetail: null
+      };
+    }
+
+    try {
+      const exec = await container.exec({
+        Cmd: ["node", "openclaw.mjs", "gateway", "status", "--json"],
+        AttachStdout: true,
+        AttachStderr: true,
+        Tty: true
+      });
+      const stream = await exec.start({ Detach: false, Tty: true });
+      const output = await readStream(stream);
+      const parsed = JSON.parse(output) as {
+        rpc?: { ok?: boolean; url?: string; error?: string };
+      };
+      const rpcOk = parsed.rpc?.ok === true;
+      return {
+        readiness: rpcOk ? "ready" : "warming",
+        rpcOk,
+        rpcUrl: parsed.rpc?.url ?? null,
+        readinessDetail: parsed.rpc?.error ?? null
+      };
+    } catch (error) {
+      return {
+        readiness: "error",
+        rpcOk: false,
+        rpcUrl: null,
+        readinessDetail: error instanceof Error ? error.message : String(error)
+      };
+    }
   }
 
   private pathsForTenant(tenantId: string) {
@@ -184,4 +242,21 @@ export class OpenClawRuntimeAdapter {
 
 export function sanitizeTenantId(tenantId: string): string {
   return tenantId.replace(/[^a-zA-Z0-9_-]/g, "-").slice(0, 64) || "tenant";
+}
+
+async function readStream(stream: NodeJS.ReadableStream): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const output = new PassThrough();
+    const chunks: Buffer[] = [];
+
+    output.on("data", (chunk) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    output.on("end", () => {
+      resolve(Buffer.concat(chunks).toString("utf-8").trim());
+    });
+    output.on("error", reject);
+    stream.on("error", reject);
+    stream.pipe(output);
+  });
 }

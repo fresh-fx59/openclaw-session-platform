@@ -43,3 +43,4 @@ The OpenClaw runtime adapter is now verified live on the deployment host:
 - it starts a real `openclaw-demo-openclaw-gateway:latest` tenant container through the Docker socket
 - the tenant OpenClaw container stays alive across `openclaw-session-platform` container restarts
 - runtime readiness is not identical to container liveness; the gateway process needs a short warm-up before RPC becomes healthy
+- the platform status endpoint now exposes both Docker `state` and gateway `readiness`

@@ -67,6 +67,7 @@ Live verification note:
 
 - the tenant container reaches Docker `running` state immediately after start
 - the OpenClaw gateway inside the container needs a short warm-up before `gateway status --json` reports `rpc.ok: true`
+- `GET /tenants/:tenantId/openclaw/status` now reports both raw container `state` and gateway `readiness`
 
 ## Test
 

@@ -41,4 +41,5 @@ The real OpenClaw runtime adapter was also verified live after restart:
 - `POST /tenants/runtime-proof-4/openclaw/start` created a real tenant container on the Docker host
 - `docker exec openclaw-tenant-runtime-proof-4 node openclaw.mjs gateway status --json` reported `rpc.ok: true` after warm-up
 - restarting the `openclaw-session-platform` app container did not terminate the tenant OpenClaw container
-- after app restart, `GET /tenants/runtime-proof-4/openclaw/status` still reported `running`
+- after app restart, `GET /tenants/runtime-proof-4/openclaw/status` still reported `state: running`
+- after app restart, `GET /tenants/runtime-proof-4/openclaw/status` also reported `readiness: ready` and `rpcOk: true`

@@ -1,6 +1,6 @@
 {
   "name": "openclaw-session-platform",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Ephemeral runtime orchestration and persistent workspace platform for OpenCLO.",
   "type": "module",
   "main": "dist/index.js",

@@ -47,6 +47,10 @@ export interface OpenClawTenantRuntimeStatus {
   hostConfigPath: string;
   hostWorkspacePath: string;
   state: "not_found" | "created" | "running" | "exited" | "unknown";
+  readiness: "not_applicable" | "warming" | "ready" | "error" | "unknown";
+  rpcOk: boolean;
+  rpcUrl: string | null;
+  readinessDetail: string | null;
 }
 
 export interface PlatformState {
