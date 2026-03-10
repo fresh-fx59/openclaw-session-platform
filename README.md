@@ -37,6 +37,7 @@ The container joins the existing `traefik-public` Docker network and is intended
 
 Current server deployment:
 
+- App URL: `https://openclaw-session-platform.aiengineerhelper.com/`
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/healthz`
 - Metrics URL: `https://openclaw-session-platform.aiengineerhelper.com/metrics`
 

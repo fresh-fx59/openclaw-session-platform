@@ -14,6 +14,15 @@ const dispatchSchema = z.object({
 export function buildServer(runtimeManager: RuntimeManager, metrics: MetricsRegistry) {
   const app = Fastify({ logger: true });
 
+  app.get("/", async () => ({
+    service: "openclaw-session-platform",
+    status: "ok",
+    endpoints: {
+      healthz: "/healthz",
+      metrics: "/metrics"
+    }
+  }));
+
   app.get("/healthz", async () => ({ ok: true }));
 
   app.get("/metrics", async (_request, reply) => {
