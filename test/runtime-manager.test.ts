@@ -66,4 +66,19 @@ describe("RuntimeManager", () => {
     expect(log).toContain("first request");
     expect(log).toContain("second request");
   });
+
+  test("handles concurrent dispatches without corrupting state", async () => {
+    const { runtimeManager, stateStore } = await buildSubject();
+
+    await Promise.all([
+      runtimeManager.dispatch("tenant-a", { prompt: "alpha" }),
+      runtimeManager.dispatch("tenant-b", { prompt: "beta" })
+    ]);
+
+    const tenantA = await stateStore.getTenant("tenant-a");
+    const tenantB = await stateStore.getTenant("tenant-b");
+
+    expect(tenantA?.tenantId).toBe("tenant-a");
+    expect(tenantB?.tenantId).toBe("tenant-b");
+  });
 });

@@ -17,6 +17,7 @@ export function buildServer(runtimeManager: RuntimeManager, metrics: MetricsRegi
   app.get("/healthz", async () => ({ ok: true }));
 
   app.get("/metrics", async (_request, reply) => {
+    metrics.activeRuntimes.set(runtimeManager.getActiveRuntimeCount());
     reply.header("Content-Type", metrics.registry.contentType);
     return metrics.registry.metrics();
   });

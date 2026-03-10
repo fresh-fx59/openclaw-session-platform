@@ -35,6 +35,11 @@ docker compose up -d --build
 
 The container joins the existing `traefik-public` Docker network and is intended to be published behind Traefik + Cloudflare.
 
+Current server deployment:
+
+- App URL: `https://openclaw-session-platform.aiengineerhelper.com/healthz`
+- Metrics URL: `https://openclaw-session-platform.aiengineerhelper.com/metrics`
+
 ## Test
 
 ```bash

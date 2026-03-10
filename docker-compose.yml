@@ -4,8 +4,8 @@ services:
     container_name: openclaw-session-platform
     environment:
       PORT: 8080
-      OPENCLO_IDLE_TIMEOUT_MS: 900000
-      OPENCLO_DATA_DIR: /app/state
+      OPENCLAW_SESSION_PLATFORM_IDLE_TIMEOUT_MS: 900000
+      OPENCLAW_SESSION_PLATFORM_DATA_DIR: /app/state
     volumes:
       - ./runtime-data:/app/state
     restart: unless-stopped
