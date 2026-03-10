@@ -23,6 +23,16 @@ class FakeContainer {
         ok: true,
         url: "ws://127.0.0.1:18789"
       }
+    },
+    private readonly gatewayCallResults: Record<string, unknown> = {
+      status: {
+        sessions: {
+          count: 0
+        }
+      },
+      health: {
+        ok: true
+      }
     }
   ) {}
 
@@ -38,8 +48,19 @@ class FakeContainer {
     this.status = "exited";
   }
 
-  async exec() {
-    return new FakeExec(JSON.stringify(this.gatewayStatus));
+  async exec(options: { Cmd: string[] }) {
+    const command = options.Cmd.join(" ");
+    if (command.includes("gateway status --json")) {
+      return new FakeExec(JSON.stringify(this.gatewayStatus));
+    }
+
+    const methodIndex = options.Cmd.findIndex((part) => part === "call");
+    if (methodIndex >= 0) {
+      const method = options.Cmd[methodIndex + 1];
+      return new FakeExec(JSON.stringify(this.gatewayCallResults[method] ?? { ok: true }));
+    }
+
+    return new FakeExec(JSON.stringify({ ok: true }));
   }
 }
 
@@ -119,5 +140,28 @@ describe("OpenClawRuntimeAdapter", () => {
     expect(status.readiness).toBe("warming");
     expect(status.rpcOk).toBe(false);
     expect(status.readinessDetail).toContain("gateway closed");
+  });
+
+  test("calls allowed gateway methods and rejects unsafe ones", async () => {
+    const root = await mkdtemp(join(tmpdir(), "openclaw-adapter-"));
+    const docker = new FakeDocker();
+    docker.containers.set("openclaw-tenant-call-tenant", new FakeContainer("running"));
+    const adapter = new OpenClawRuntimeAdapter(docker as never, {
+      containerStateDir: root,
+      hostStateDir: root,
+      image: "openclaw-demo-openclaw-gateway:latest",
+      network: "internal"
+    });
+
+    const statusResult = await adapter.call("call-tenant", "status");
+    expect(statusResult).toEqual({
+      sessions: {
+        count: 0
+      }
+    });
+
+    await expect(adapter.call("call-tenant", "chat.send")).rejects.toThrow(
+      "OpenClaw gateway method is not allowed"
+    );
   });
 });

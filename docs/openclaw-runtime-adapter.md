@@ -8,6 +8,7 @@ This layer prepares and manages a real OpenClaw gateway container per tenant.
 - `POST /tenants/:tenantId/openclaw/start`
 - `GET /tenants/:tenantId/openclaw/status`
 - `POST /tenants/:tenantId/openclaw/stop`
+- `POST /tenants/:tenantId/openclaw/call`
 
 ## Behavior
 
@@ -16,6 +17,7 @@ This layer prepares and manages a real OpenClaw gateway container per tenant.
 - starts a real `openclaw-demo-openclaw-gateway:latest` container on the server Docker daemon
 - mounts tenant config/workspace into the OpenClaw container
 - keeps container lifecycle separate from the platform metadata plane
+- relays a narrow allowlisted set of gateway methods through the tenant container
 
 ## Verified Live Result
 
@@ -33,6 +35,7 @@ Observed result:
 - `node openclaw.mjs gateway status --json` eventually reported `rpc.ok: true`
 - after restarting the `openclaw-session-platform` app container, the tenant OpenClaw container remained up and the platform status endpoint still reported `running`
 - the platform status endpoint now also reports readiness fields such as `readiness`, `rpcOk`, `rpcUrl`, and `readinessDetail`
+- the platform gateway-call endpoint successfully relayed `status` and `health` through the tenant container
 
 ## Operational Note
 
@@ -42,3 +45,14 @@ Container state and gateway readiness are different signals.
 - OpenClaw RPC may still be warming up for a short period
 - readiness is now exposed by the platform-level status endpoint
 - in-container `gateway status --json` remains the ground-truth diagnostic when deeper debugging is needed
+
+## Allowed gateway methods
+
+The initial public bridge is intentionally narrow:
+
+- `health`
+- `status`
+- `system-presence`
+- `cron.*`
+
+Methods outside this allowlist are rejected with `400 method_not_allowed`.

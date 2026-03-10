@@ -16,7 +16,7 @@ The MVP separates durable tenant state from ephemeral runtime state.
 - `WorkspaceStore`: persists per-tenant workspace and artifact files
 - `RuntimeManager`: keeps one active runtime lease per tenant
 - `IdleReaper`: stops inactive runtimes
-- `API`: dispatch and lifecycle endpoints
+- `API`: dispatch, lifecycle, readiness, and allowlisted gateway-call endpoints
 
 ## Durability model
 
@@ -44,3 +44,4 @@ The OpenClaw runtime adapter is now verified live on the deployment host:
 - the tenant OpenClaw container stays alive across `openclaw-session-platform` container restarts
 - runtime readiness is not identical to container liveness; the gateway process needs a short warm-up before RPC becomes healthy
 - the platform status endpoint now exposes both Docker `state` and gateway `readiness`
+- the platform now exposes a narrow interaction bridge for safe allowlisted gateway methods

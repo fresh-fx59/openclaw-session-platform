@@ -61,6 +61,9 @@ curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex
 curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/start
 curl https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/status
 curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/stop
+curl -X POST https://openclaw-session-platform.aiengineerhelper.com/tenants/alex/openclaw/call \
+  -H 'content-type: application/json' \
+  -d '{"method":"status"}'
 ```
 
 Live verification note:
@@ -68,6 +71,7 @@ Live verification note:
 - the tenant container reaches Docker `running` state immediately after start
 - the OpenClaw gateway inside the container needs a short warm-up before `gateway status --json` reports `rpc.ok: true`
 - `GET /tenants/:tenantId/openclaw/status` now reports both raw container `state` and gateway `readiness`
+- `POST /tenants/:tenantId/openclaw/call` now relays a small allowlisted set of gateway methods through the tenant container
 
 ## Test
 

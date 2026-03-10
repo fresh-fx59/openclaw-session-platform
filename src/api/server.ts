@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { TenantContextCompiler } from "../context/compiler.js";
 import { MetricsRegistry } from "../metrics/registry.js";
-import { OpenClawRuntimeAdapter } from "../openclaw/runtime-adapter.js";
+import { OpenClawMethodNotAllowedError, OpenClawRuntimeAdapter } from "../openclaw/runtime-adapter.js";
 import { RuntimeManager } from "../runtime/runtime-manager.js";
 
 const dispatchSchema = z.object({
@@ -11,6 +11,13 @@ const dispatchSchema = z.object({
   memorySummary: z.string().optional(),
   artifactName: z.string().optional(),
   artifactContent: z.string().optional()
+});
+
+const gatewayCallSchema = z.object({
+  method: z.string().min(1),
+  params: z.record(z.string(), z.unknown()).optional(),
+  expectFinal: z.boolean().optional(),
+  timeoutMs: z.number().int().positive().max(60_000).optional()
 });
 
 export function buildServer(
@@ -87,6 +94,25 @@ export function buildServer(
   app.post("/tenants/:tenantId/openclaw/stop", async (request) => {
     const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
     return openClawRuntimeAdapter.stop(params.tenantId);
+  });
+
+  app.post("/tenants/:tenantId/openclaw/call", async (request, reply) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    const body = gatewayCallSchema.parse(request.body);
+
+    try {
+      const result = await openClawRuntimeAdapter.call(params.tenantId, body.method, body.params, {
+        expectFinal: body.expectFinal,
+        timeoutMs: body.timeoutMs
+      });
+      return { method: body.method, result };
+    } catch (error) {
+      if (error instanceof OpenClawMethodNotAllowedError) {
+        reply.code(400);
+        return { error: "method_not_allowed", method: body.method };
+      }
+      throw error;
+    }
   });
 
   return app;

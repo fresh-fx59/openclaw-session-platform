@@ -8,6 +8,8 @@ import Dockerode from "dockerode";
 
 import type { OpenClawTenantRuntimeStatus } from "../domain/types.js";
 
+const ALLOWED_GATEWAY_METHODS = [/^health$/, /^status$/, /^system-presence$/, /^cron\.[a-z0-9_.-]+$/i];
+
 interface DockerExecLike {
   start(options: { Detach: boolean; Tty: boolean }): Promise<NodeJS.ReadableStream>;
 }
@@ -44,6 +46,13 @@ interface OpenClawRuntimeAdapterConfig {
   hostStateDir: string;
   image: string;
   network: string;
+}
+
+export class OpenClawMethodNotAllowedError extends Error {
+  constructor(method: string) {
+    super(`OpenClaw gateway method is not allowed: ${method}`);
+    this.name = "OpenClawMethodNotAllowedError";
+  }
 }
 
 export class OpenClawRuntimeAdapter {
@@ -140,6 +149,34 @@ export class OpenClawRuntimeAdapter {
     return inspected ?? this.baseStatus(tenantId);
   }
 
+  async call(
+    tenantId: string,
+    method: string,
+    params: Record<string, unknown> = {},
+    options: { expectFinal?: boolean; timeoutMs?: number } = {}
+  ): Promise<unknown> {
+    if (!isAllowedGatewayMethod(method)) {
+      throw new OpenClawMethodNotAllowedError(method);
+    }
+
+    const runtime = this.pathsForTenant(tenantId);
+    const container = this.docker.getContainer(runtime.containerName);
+    const args = ["node", "openclaw.mjs", "gateway", "call", method, "--json"];
+
+    if (options.expectFinal) {
+      args.push("--expect-final");
+    }
+
+    if (options.timeoutMs) {
+      args.push("--timeout", String(options.timeoutMs));
+    }
+
+    args.push("--params", JSON.stringify(params));
+
+    const output = await this.execJson(container, args);
+    return JSON.parse(output) as unknown;
+  }
+
   private async inspectContainer(containerName: string): Promise<OpenClawTenantRuntimeStatus | null> {
     try {
       const runtime = this.pathsForTenant(containerName.replace(/^openclaw-tenant-/, ""));
@@ -198,14 +235,7 @@ export class OpenClawRuntimeAdapter {
     }
 
     try {
-      const exec = await container.exec({
-        Cmd: ["node", "openclaw.mjs", "gateway", "status", "--json"],
-        AttachStdout: true,
-        AttachStderr: true,
-        Tty: true
-      });
-      const stream = await exec.start({ Detach: false, Tty: true });
-      const output = await readStream(stream);
+      const output = await this.execJson(container, ["node", "openclaw.mjs", "gateway", "status", "--json"]);
       const parsed = JSON.parse(output) as {
         rpc?: { ok?: boolean; url?: string; error?: string };
       };
@@ -224,6 +254,17 @@ export class OpenClawRuntimeAdapter {
         readinessDetail: error instanceof Error ? error.message : String(error)
       };
     }
+  }
+
+  private async execJson(container: DockerContainerLike, cmd: string[]): Promise<string> {
+    const exec = await container.exec({
+      Cmd: cmd,
+      AttachStdout: true,
+      AttachStderr: true,
+      Tty: true
+    });
+    const stream = await exec.start({ Detach: false, Tty: true });
+    return readStream(stream);
   }
 
   private pathsForTenant(tenantId: string) {
@@ -259,4 +300,8 @@ async function readStream(stream: NodeJS.ReadableStream): Promise<string> {
     stream.on("error", reject);
     stream.pipe(output);
   });
+}
+
+function isAllowedGatewayMethod(method: string): boolean {
+  return ALLOWED_GATEWAY_METHODS.some((pattern) => pattern.test(method));
 }
