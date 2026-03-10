@@ -63,7 +63,14 @@ export class RuntimeManager {
     );
 
     if (request.artifactName && request.artifactContent) {
-      await this.workspaceStore.writeArtifact(tenantId, request.artifactName, request.artifactContent);
+      const artifact = await this.workspaceStore.writeArtifact(tenantId, request.artifactName, request.artifactContent);
+      await this.stateStore.upsertArtifact({
+        tenantId,
+        name: request.artifactName,
+        path: artifact.path,
+        contentSha256: artifact.contentSha256,
+        updatedAt: new Date().toISOString()
+      });
     }
 
     await this.stateStore.upsertRuntime(this.toRuntimeRecord(runtime, "active"));

@@ -43,8 +43,17 @@ describe("PostgresStateStore", () => {
       stoppedAt: null
     });
 
+    await store.upsertArtifact({
+      tenantId: "alex",
+      name: "proof.txt",
+      path: "/tmp/alex/proof.txt",
+      contentSha256: "sha",
+      updatedAt: "2026-03-10T00:02:00.000Z"
+    });
+
     const tenantBefore = await store.getTenant("alex");
     expect(tenantBefore?.currentRuntimeId).toBe("runtime-1");
+    expect(await store.listArtifactsByTenant("alex")).toHaveLength(1);
 
     await store.resetActiveRuntimesOnBoot();
 
@@ -54,5 +63,6 @@ describe("PostgresStateStore", () => {
     expect(tenantAfter?.currentRuntimeId).toBeNull();
     expect(runtimeAfter?.status).toBe("stopped");
     expect(runtimeAfter?.stoppedAt).not.toBeNull();
+    expect(await store.listArtifactsByTenant("alex")).toHaveLength(1);
   });
 });

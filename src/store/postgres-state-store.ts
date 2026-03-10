@@ -1,6 +1,6 @@
 import { Pool } from "pg";
 
-import type { RuntimeRecord, TenantState } from "../domain/types.js";
+import type { ArtifactRecord, RuntimeRecord, TenantState } from "../domain/types.js";
 import type { StateStore } from "./state-store.js";
 
 const INIT_SQL = `
@@ -23,7 +23,17 @@ CREATE TABLE IF NOT EXISTS runtimes (
   stopped_at TIMESTAMPTZ NULL
 );
 
+CREATE TABLE IF NOT EXISTS artifacts (
+  tenant_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  path TEXT NOT NULL,
+  content_sha256 TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (tenant_id, name)
+);
+
 CREATE INDEX IF NOT EXISTS idx_runtimes_tenant_id ON runtimes (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_artifacts_tenant_id ON artifacts (tenant_id);
 `;
 
 export class PostgresStateStore implements StateStore {
@@ -107,6 +117,36 @@ export class PostgresStateStore implements StateStore {
     return this.mapRuntime(result.rows[0]);
   }
 
+  async upsertArtifact(artifact: ArtifactRecord): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO artifacts (
+         tenant_id, name, path, content_sha256, updated_at
+       ) VALUES ($1, $2, $3, $4, $5)
+       ON CONFLICT (tenant_id, name) DO UPDATE SET
+         path = EXCLUDED.path,
+         content_sha256 = EXCLUDED.content_sha256,
+         updated_at = EXCLUDED.updated_at`,
+      [
+        artifact.tenantId,
+        artifact.name,
+        artifact.path,
+        artifact.contentSha256,
+        artifact.updatedAt
+      ]
+    );
+  }
+
+  async listArtifactsByTenant(tenantId: string): Promise<ArtifactRecord[]> {
+    const result = await this.pool.query(
+      `SELECT tenant_id, name, path, content_sha256, updated_at
+       FROM artifacts
+       WHERE tenant_id = $1
+       ORDER BY updated_at DESC, name ASC`,
+      [tenantId]
+    );
+    return result.rows.map((row) => this.mapArtifact(row));
+  }
+
   async resetActiveRuntimesOnBoot(): Promise<void> {
     await this.pool.query(`UPDATE runtimes SET status = 'stopped', stopped_at = NOW() WHERE status = 'active'`);
     await this.pool.query(`UPDATE tenants SET current_runtime_id = NULL`);
@@ -132,6 +172,16 @@ export class PostgresStateStore implements StateStore {
       createdAt: new Date(String(row.created_at)).toISOString(),
       lastActivityAt: new Date(String(row.last_activity_at)).toISOString(),
       stoppedAt: row.stopped_at ? new Date(String(row.stopped_at)).toISOString() : null
+    };
+  }
+
+  private mapArtifact(row: Record<string, unknown>): ArtifactRecord {
+    return {
+      tenantId: String(row.tenant_id),
+      name: String(row.name),
+      path: String(row.path),
+      contentSha256: String(row.content_sha256),
+      updatedAt: new Date(String(row.updated_at)).toISOString()
     };
   }
 }

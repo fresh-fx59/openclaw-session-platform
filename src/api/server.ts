@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import { z } from "zod";
 
+import { TenantContextCompiler } from "../context/compiler.js";
 import { MetricsRegistry } from "../metrics/registry.js";
 import { RuntimeManager } from "../runtime/runtime-manager.js";
 
@@ -11,7 +12,11 @@ const dispatchSchema = z.object({
   artifactContent: z.string().optional()
 });
 
-export function buildServer(runtimeManager: RuntimeManager, metrics: MetricsRegistry) {
+export function buildServer(
+  runtimeManager: RuntimeManager,
+  metrics: MetricsRegistry,
+  contextCompiler: TenantContextCompiler
+) {
   const app = Fastify({ logger: true });
 
   app.get("/", async () => ({
@@ -34,6 +39,16 @@ export function buildServer(runtimeManager: RuntimeManager, metrics: MetricsRegi
   app.get("/tenants/:tenantId/status", async (request) => {
     const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
     return runtimeManager.getRuntimeStatus(params.tenantId);
+  });
+
+  app.get("/tenants/:tenantId/context", async (request, reply) => {
+    const params = z.object({ tenantId: z.string().min(1) }).parse(request.params);
+    const payload = await contextCompiler.compile(params.tenantId);
+    if (!payload) {
+      reply.code(404);
+      return { error: "tenant_not_found" };
+    }
+    return payload;
   });
 
   app.post("/tenants/:tenantId/dispatch", async (request) => {

@@ -11,6 +11,7 @@ The MVP separates durable tenant state from ephemeral runtime state.
 ## Components
 
 - `StateStore`: persists tenant and runtime metadata in Postgres
+- `ContextCompiler`: builds a compact tenant resume payload from durable metadata
 - `WorkspaceStore`: persists per-tenant workspace and artifact files
 - `RuntimeManager`: keeps one active runtime lease per tenant
 - `IdleReaper`: stops inactive runtimes
@@ -22,6 +23,7 @@ Durable:
 
 - tenant workspace files
 - artifact files
+- artifact manifest metadata in Postgres
 - runtime metadata and lifecycle state in Postgres
 - request history log
 

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { mkdir, writeFile, appendFile, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
@@ -22,11 +23,14 @@ export class WorkspaceStore {
     await appendFile(target, `${entry}\n`, "utf-8");
   }
 
-  async writeArtifact(tenantId: string, name: string, content: string): Promise<string> {
+  async writeArtifact(tenantId: string, name: string, content: string): Promise<{ path: string; contentSha256: string }> {
     const { artifactPath } = await this.ensureTenantPaths(tenantId);
     const target = join(artifactPath, name);
     await writeFile(target, content, "utf-8");
-    return target;
+    return {
+      path: target,
+      contentSha256: createHash("sha256").update(content, "utf-8").digest("hex")
+    };
   }
 
   async readRequestLog(tenantId: string): Promise<string> {

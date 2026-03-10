@@ -8,6 +8,7 @@ This repository implements a minimal platform that provides:
 
 - per-tenant isolated persistent workspaces
 - per-tenant isolated artifact storage
+- durable artifact manifest metadata
 - ephemeral runtimes created on demand
 - idle timeout shutdown
 - cold-start resume from durable workspace state
@@ -45,8 +46,10 @@ Current server deployment:
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/`
 - App URL: `https://openclaw-session-platform.aiengineerhelper.com/healthz`
 - Metrics URL: `https://openclaw-session-platform.aiengineerhelper.com/metrics`
+- Context URL example: `https://openclaw-session-platform.aiengineerhelper.com/tenants/<tenantId>/context`
 
 Restart verification notes: [`docs/restart-verification.md`](docs/restart-verification.md)
+Context compiler notes: [`docs/context-compiler.md`](docs/context-compiler.md)
 
 ## Test
 

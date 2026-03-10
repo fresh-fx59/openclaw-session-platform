@@ -30,3 +30,8 @@ Verified on the live deployment at `https://openclaw-session-platform.aiengineer
 - the next `dispatch` created a fresh runtime id and resumed persisted context
 
 GitHub Actions CI also passed for the corresponding push that introduced the Postgres-backed store and Docker smoke validation.
+
+The context compiler endpoint was also verified live after restart:
+
+- `GET /tenants/:tenantId/context` preserved memory summary and artifact manifest
+- `currentRuntimeId` was reset to `null` after restart

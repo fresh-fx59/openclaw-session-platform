@@ -19,6 +19,25 @@ export interface RuntimeRecord {
   stoppedAt: string | null;
 }
 
+export interface ArtifactRecord {
+  tenantId: string;
+  name: string;
+  path: string;
+  contentSha256: string;
+  updatedAt: string;
+}
+
+export interface CompiledTenantContext {
+  tenantId: string;
+  memorySummary: string | null;
+  workspacePath: string;
+  artifactPath: string;
+  currentRuntimeId: string | null;
+  lastRequestAt: string | null;
+  lastStoppedAt: string | null;
+  artifacts: ArtifactRecord[];
+}
+
 export interface PlatformState {
   tenants: Record<string, TenantState>;
   runtimes: Record<string, RuntimeRecord>;

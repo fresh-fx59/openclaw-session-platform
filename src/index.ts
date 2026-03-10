@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { Pool } from "pg";
 import { buildServer } from "./api/server.js";
 import { loadConfig } from "./config/app-config.js";
+import { TenantContextCompiler } from "./context/compiler.js";
 import { MetricsRegistry } from "./metrics/registry.js";
 import { IdleReaper } from "./reaper/idle-reaper.js";
 import { RuntimeManager } from "./runtime/runtime-manager.js";
@@ -24,10 +25,11 @@ async function main(): Promise<void> {
     join(config.dataDir, "artifacts")
   );
   const runtimeManager = new RuntimeManager(stateStore, workspaceStore);
+  const contextCompiler = new TenantContextCompiler(stateStore);
   const reaper = new IdleReaper(runtimeManager, config.idleTimeoutMs);
   const metrics = new MetricsRegistry();
   metrics.activeRuntimes.set(0);
-  const server = buildServer(runtimeManager, metrics);
+  const server = buildServer(runtimeManager, metrics, contextCompiler);
 
   reaper.start();
 

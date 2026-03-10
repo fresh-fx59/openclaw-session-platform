@@ -4,7 +4,7 @@ import { join } from "node:path";
 
 import { describe, expect, test } from "vitest";
 
-import type { RuntimeRecord, TenantState } from "../src/domain/types.js";
+import type { ArtifactRecord, RuntimeRecord, TenantState } from "../src/domain/types.js";
 import { RuntimeManager } from "../src/runtime/runtime-manager.js";
 import type { StateStore } from "../src/store/state-store.js";
 import { WorkspaceStore } from "../src/store/workspace-store.js";
@@ -12,6 +12,7 @@ import { WorkspaceStore } from "../src/store/workspace-store.js";
 class InMemoryStateStore implements StateStore {
   private tenants = new Map<string, TenantState>();
   private runtimes = new Map<string, RuntimeRecord>();
+  private artifacts = new Map<string, ArtifactRecord[]>();
 
   async initialize(): Promise<void> {}
   async close(): Promise<void> {}
@@ -31,6 +32,18 @@ class InMemoryStateStore implements StateStore {
 
   async getRuntime(runtimeId: string): Promise<RuntimeRecord | null> {
     return this.runtimes.get(runtimeId) ?? null;
+  }
+
+  async upsertArtifact(artifact: ArtifactRecord): Promise<void> {
+    const rows = this.artifacts.get(artifact.tenantId) ?? [];
+    const filtered = rows.filter((row) => row.name !== artifact.name);
+    filtered.push(artifact);
+    filtered.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    this.artifacts.set(artifact.tenantId, filtered);
+  }
+
+  async listArtifactsByTenant(tenantId: string): Promise<ArtifactRecord[]> {
+    return this.artifacts.get(tenantId) ?? [];
   }
 }
 
