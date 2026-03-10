@@ -1,0 +1,22 @@
+services:
+  openclaw-session-platform:
+    build: .
+    container_name: openclaw-session-platform
+    environment:
+      PORT: 8080
+      OPENCLO_IDLE_TIMEOUT_MS: 900000
+      OPENCLO_DATA_DIR: /app/state
+    volumes:
+      - ./runtime-data:/app/state
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - traefik-public
+
+networks:
+  traefik-public:
+    external: true

@@ -1,0 +1,40 @@
+import { mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
+import { buildServer } from "./api/server.js";
+import { loadConfig } from "./config/app-config.js";
+import { MetricsRegistry } from "./metrics/registry.js";
+import { IdleReaper } from "./reaper/idle-reaper.js";
+import { RuntimeManager } from "./runtime/runtime-manager.js";
+import { JsonStateStore } from "./store/state-store.js";
+import { WorkspaceStore } from "./store/workspace-store.js";
+
+async function main(): Promise<void> {
+  const config = loadConfig();
+  await mkdir(config.dataDir, { recursive: true });
+
+  const stateStore = new JsonStateStore(join(config.dataDir, "state.json"));
+  const workspaceStore = new WorkspaceStore(
+    join(config.dataDir, "workspaces"),
+    join(config.dataDir, "artifacts")
+  );
+  const runtimeManager = new RuntimeManager(stateStore, workspaceStore);
+  const reaper = new IdleReaper(runtimeManager, config.idleTimeoutMs);
+  const metrics = new MetricsRegistry();
+  metrics.activeRuntimes.set(0);
+  const server = buildServer(runtimeManager, metrics);
+
+  reaper.start();
+
+  const shutdown = async () => {
+    reaper.stop();
+    await server.close();
+  };
+
+  process.on("SIGINT", () => void shutdown());
+  process.on("SIGTERM", () => void shutdown());
+
+  await server.listen({ port: config.port, host: "0.0.0.0" });
+}
+
+void main();
