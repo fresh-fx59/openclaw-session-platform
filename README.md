@@ -72,6 +72,7 @@ Current server deployment:
 Restart verification notes: [`docs/restart-verification.md`](docs/restart-verification.md)
 Context compiler notes: [`docs/context-compiler.md`](docs/context-compiler.md)
 OpenClaw runtime adapter notes: [`docs/openclaw-runtime-adapter.md`](docs/openclaw-runtime-adapter.md)
+Session-based architecture notes: [`docs/session-based-openclaw-architecture.md`](docs/session-based-openclaw-architecture.md)
 
 ## Runtime Adapter API
 
